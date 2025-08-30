@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cogs Management - <%= guild.name %></title>
+    <link rel="stylesheet" href="/public/css/style.css">
+    <style>
+        .cog-item {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            background: #f9f9f9;
+        }
+        .cog-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .cog-name {
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .cog-description {
+            color: #666;
+            margin-bottom: 15px;
+        }
+        .toggle-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .toggle-btn.enable {
+            background: #4CAF50;
+            color: white;
+        }
+        .toggle-btn.disable {
+            background: #f44336;
+            color: white;
+        }
+        .toggle-btn:hover {
+            opacity: 0.8;
+        }
+        .status-indicator {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-enabled {
+            background: #4CAF50;
+            color: white;
+        }
+        .status-disabled {
+            background: #f44336;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Cogs Management</h1>
+        <p>Manage which cogs (plugins) are enabled for <strong><%= guild.name %></strong></p>
+        
+        <div class="cogs-list">
+            <% cogs.forEach(cog => { %>
+                <div class="cog-item" id="cog-<%= cog.id %>">
+                    <div class="cog-header">
+                        <div>
+                            <div class="cog-name"><%= cog.name %></div>
+                            <div class="cog-description"><%= cog.description %></div>
+                        </div>
+                        <div>
+                            <span class="status-indicator <%= cog.enabled ? 'status-enabled' : 'status-disabled' %>">
+                                <%= cog.enabled ? 'ENABLED' : 'DISABLED' %>
+                            </span>
+                            <button 
+                                class="toggle-btn <%= cog.enabled ? 'disable' : 'enable' %>"
+                                onclick="toggleCog('<%= guildId %>', '<%= cog.id %>', <%= cog.enabled %>)"
+                            >
+                                <%= cog.enabled ? 'Disable' : 'Enable' %>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            <% }) %>
+        </div>
+        
+        <div class="info-box">
+            <h3>About Cogs</h3>
+            <p>Cogs are modular plugins that add functionality to the bot. When a cog is disabled:</p>
+            <ul>
+                <li>Its commands will not be available to users</li>
+                <li>Event handlers will not run</li>
+                <li>The cog remains loaded but inactive for this server</li>
+            </ul>
+            <p><strong>Note:</strong> Changes take effect immediately. Use the <code>/reload &lt;cog&gt;</code> command to reload cog code without restarting the bot.</p>
+        </div>
+    </div>
+
+    <script>
+        async function toggleCog(guildId, cogId, currentlyEnabled) {
+            const action = currentlyEnabled ? 'disable' : 'enable';
+            const button = event.target;
+            
+            // Disable button during request
+            button.disabled = true;
+            button.textContent = 'Processing...';
+            
+            try {
+                const response = await fetch(`/dashboard/${guildId}/cogs/toggle`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ cogId, action })
+                });
+                
+                const result = await response.json();
+                
+                if (result.ok) {
+                    // Reload the page to show updated state
+                    location.reload();
+                } else {
+                    alert('Failed to toggle cog: ' + (result.error || 'Unknown error'));
+                    // Re-enable button
+                    button.disabled = false;
+                    button.textContent = currentlyEnabled ? 'Disable' : 'Enable';
+                }
+            } catch (error) {
+                console.error('Toggle cog error:', error);
+                alert('Failed to toggle cog. Please try again.');
+                // Re-enable button
+                button.disabled = false;
+                button.textContent = currentlyEnabled ? 'Disable' : 'Enable';
+            }
+        }
+    </script>
+</body>
+</html>
